@@ -276,10 +276,23 @@ int parseline(const char *cmdline, char **argv)
  * builtin_cmd - If the user has typed a built-in command then execute
  *    it immediately.  
  */
-int builtin_cmd(char **argv) 
-{
-  return 0;     /* not a builtin command */
-}
+int builtin_cmd(char **argv)                                                    
+{                                                                               
+  //If entered "quit", exit immediately                                         
+  if (!strcmp(argv[0],"quit"))                                                  
+    exit(0);                                                                    
+  //If entered "fg" or "bg", call do_bgfg                                       
+  else if (!strcmp(argv[0], "fg") || !strcmp(argv[0], "bg")) {                  
+    do_bgfg(argv);                                                              
+    return 1;                                                                   
+  }                                                                             
+  //If entered "jobs", call listjobs that lists all jobs                        
+  else if (!strcmp(argv[0], "jobs")) {                                          
+    listjobs(jobs);                                                             
+    return 1;                                                                   
+  }                                                                             
+  return 0;     /* not a builtin command */                                     
+}                                       
 
 /* 
  * do_bgfg - Execute the builtin bg and fg commands
