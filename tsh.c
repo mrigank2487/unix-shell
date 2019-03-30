@@ -297,10 +297,57 @@ int builtin_cmd(char **argv)
 /* 
  * do_bgfg - Execute the builtin bg and fg commands
  */
-void do_bgfg(char **argv) 
-{
-  return;
-}
+void do_bgfg(char **argv)                                                       
+{                                                                               
+  struct job_t *job;                                                            
+  pid_t pid;                                                                    
+  int jid;                                                                      
+  char *id = argv[1];                                                           
+                                                                                
+  //If ID does not exist                                                        
+  if(id == NULL) {                                                              
+    printf("%s command requires PID or %%jobid argument\n", argv[0]);           
+    return;                                                                     
+  }                                                                             
+  //For jid                                                                     
+  if(id[0] == "%") {                                                            
+    jid = atoi(&id[1]);                                                         
+    if((job = getjobjid(jobs, jid) )== NULL) {                                  
+      printf("%s: No such job\n", id);                                          
+      return;                                                                   
+    }                                                                           
+    //Get pid (if a valid job) to kill                                          
+    else                                                                        
+      pid = job->pid;                                                           
+  }                                                                             
+  //If it is a pid                                                              
+  else if (isdigit(id[0])) {                                                    
+    pid = atoi(id);                                                             
+    if ((job=getjobpid(jobs, pid)) == NULL) {                                   
+      printf("(%d): No such process\n", pid);                                   
+      return;                                                                   
+    }                                                                           
+  }                                                                             
+  else {                                                                        
+    printf("%s: argument must be a PID or %%jobid\n", argv[0]);                 
+    return;                                                                     
+  }                                                                             
+  if (kill(-pid), SIGCOUNT < 0)                                                 
+    if (errno!=  ESRCH)                                                         
+      printf("kill error!\n");                                                  
+  //Determine fg and bg. Wait for fg, print for bg                              
+  if (!strcmp(argv[0], "fg")) {                                                 
+    job->state = FG;                                                            
+    waitfg(job->pid);                                                           
+  }                                                                             
+  else if (!strcmp(argv0], "bg")) {                                             
+    printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);                   
+    job->state=BG;                                                              
+  }                                                                             
+  //Handle Error                                                                
+  else                                                                          
+    printf("bg/fg error: %s\n", argv[0]);                                       
+}       
 
 /* 
  * waitfg - Block until process pid is no longer the foreground process
