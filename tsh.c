@@ -163,10 +163,53 @@ int main(int argc, char **argv)
  * background children don't receive SIGINT (SIGTSTP) from the kernel
  * when we type ctrl-c (ctrl-z) at the keyboard.  
  */
-void eval(char *cmdline) 
-{
-  return;
-}
+void eval(char *cmdline)                                                        
+{                                                                               
+  char *argv[MAXARGS];      // Argument list execve()                           
+  char buf[MAXLINE];        // Holds modified command line                      
+  int bg;                   // Should the job run in bg or fg?                  
+  pid_t pid;                // Process ID                                       
+  sigset_t mask;            // Signal to block other specific signals           
+                                                                                
+  strcpy(buf, cmdline);                                                         
+  bg = parseline(buf, argv);                                                    
+  //Ignore empty commands                                                       
+  if (argv[0]==NULL)                                                            
+    return;                                                                     
+  if(!builtin_cmd(argv)) {                                                      
+    /* Block SIGCHILD, Initialize signal set, add SIGCHLD to the set and        
+ *  add the signals in the set to blocked */                                    
+    sigemptyset(&mask);                                                         
+    sigaddset(&mask, SIGCHLD);                                                  
+    sigprocmask(SIG_BLOCK, &mask, NULL);                                        
+                                                                                
+    //Forking Error                                                             
+    if ((pid = fork()) < 0)                                                     
+      unix_error("Forking error");                                              
+    //Child Process                                                             
+    else if (pid==0) {                                                          
+      setpgid(0,0);                                                             
+      sigprocmask(SIG_UNBLOCK, &mask, NULL);                                    
+      //Check if command exits                                                  
+      if (execve(argv[0], argv, environ) < 0) {                                 
+        printf("%s: Command not found.\n", argv[0]);                            
+      }                                                                         
+    }                                                                           
+    //Parent Process                                                            
+    //Foregroung                                                                
+    if (!bg) {                                                                  
+      addjob(jobs, pid, FG, cmdline);                                           
+      sigprocmask(SIG_UNBLOCK, &mask, NULL);                                    
+      waitfg(pid);                                                              
+    }                                                                           
+    else {                                                                      
+      addjob(jobs, pid, BG, cmdline);                                           
+      sigprocmask(SIG_UNBLOCK, &mask, NULL);                                    
+      printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline);                       
+    }                                                                           
+  }                                                                             
+  return;                                                                       
+}                    
 
 /* 
  * parseline - Parse the command line and build the argv array.
