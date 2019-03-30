@@ -352,10 +352,19 @@ void do_bgfg(char **argv)
 /* 
  * waitfg - Block until process pid is no longer the foreground process
  */
-void waitfg(pid_t pid)
-{
-  return;
-}
+void waitfg(pid_t pid)                                                          
+{                                                                               
+  //In waitfg, use a busy loop around the sleep function                        
+  while(1) {                                                                    
+    if (pid!=fgpid(jobs)) {                                                     
+      if (verbose)                                                              
+        printf("waitfg: Process (%d) no longer the fg process\n", (int) pid);   
+      break;                                                                    
+    }                                                                           
+    else                                                                        
+      sleep(1);                                                                 
+  }                                                                             
+}                         
 
 /*****************
  * Signal handlers
