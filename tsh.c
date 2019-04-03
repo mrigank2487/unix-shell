@@ -192,7 +192,8 @@ void eval(char *cmdline)
       sigprocmask(SIG_UNBLOCK, &mask, NULL);                                    
       //Check if command exits                                                  
       if (execve(argv[0], argv, environ) < 0) {                                 
-        printf("%s: Command not found.\n", argv[0]);                            
+        printf("%s: Command not found.\n", argv[0]);
+        exit(0);                         
       }                                                                         
     }                                                                           
     //Parent Process                                                            
@@ -461,7 +462,7 @@ void sigtstp_handler(int sig)
     kill(-pid, SIGINT);                                                         
     if (sig < 0)                                                                
     {                                                                           
-      printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, (-sig));      
+      printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, (-sig));      
       deletejob(jobs, pid);                                                     
     }                                                                           
   }                                                                             
