@@ -436,11 +436,15 @@ void sigint_handler(int sig)
   int jid = pid2jid(pid);                                                       
                                                                                 
   if (pid!=0) {                                                                 
-    kill(-pid, SIGINT);                                                         
-    if (sig < 0) {                                                              
-      printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, (-sig));      
-      deletejob(jobs, pid);                                                     
-    }                                                                           
+    if (kill(-pid, 2) < 0){ 
+            if (errno != ESRCH) { 
+                printf("kill error!\n");
+            }
+        }
+        if (sig < 0) {
+            printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, (-sig));
+            deletejob(jobs, pid);
+        }                                                                  
   }                                                                             
   if (verbose)                                                                  
     printf("sigint_handler: exiting\n");                                        
@@ -463,7 +467,7 @@ void sigtstp_handler(int sig)
     if (sig < 0)                                                                
     {                                                                           
       printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, (-sig));      
-      deletejob(jobs, pid);                                                     
+                                                      
     }                                                                           
   }                                                                             
   return;                                                                       
