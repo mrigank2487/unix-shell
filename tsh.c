@@ -377,30 +377,96 @@ void waitfg(pid_t pid)
  *     available zombie children, but doesn't wait for any other
  *     currently running children to terminate.  
  */
-void sigchld_handler(int sig) 
-{
-  return;
-}
+void sigchld_handler(int sig)                                                   
+{                                                                               
+  int status;                                                                   
+  int jid;                                                                      
+  pid_t pid;                                                                    
+                                                                                
+  if (verbose)                                                                  
+    printf("sigchld_handler: entering\n");                                      
+  /* if pid > 0, then only one child process with process ID equal to pid is    
+ * the wait                                                                     
+ *  if pid = -1, then all of the parent's child process are a result of wait    
+ *  WNOHANG & WUNTRACED prevent waiting for a process that is already dead      
+ *  */                                                                          
+  while((pid = waitpid(-1, &status, WNOHANG | WUNTRACED)) > 0) {                
+    jid = pid2jid(pid);                                                         
+    //Child terminated due to a signal that was not caught                      
+    if (WIFSIGNALED(status)) {                                                  
+      deletejob(jobs,pid);                                                      
+      if (verbose)                                                              
+        printf("sigchld_handler: Job [%d] (%d) deleted\n", jid, pid);           
+      printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, WTERMSIG(status));
+    }                                                                           
+    //Child that caused return is currently stopped                             
+    else if (WIFSTOPPED(status)) {                                              
+      getjobpid(jobs, pid)->state = ST;                                         
+      printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, WSTOPSIG(status));
+    }                                                                           
+    //If child terminated normally                                              
+    else if (WIFEXITED(status)) {                                               
+      deletejob(jobs, pid);                                                     
+      if (verbose)                                                              
+        printf("sigchld_handler: Job [%d] (%d) deleted\n", jid, pid);           
+      if (verbose)                                                              
+        printf("sigchld_handler: Job [%d] (%d) terminates OK (status %d)\n", jid, pid, WEXITSTATUS(status));
+    }                                                                           
+    else {                                                                      
+      printf("There was an error handling child (%d)!\n", pid);                 
+      exit(1);                                                                  
+                                                                                
+  if (verbose)                                                                  
+    printf("sigchld_handler: exiting\n");                                       
+  return;                                                                       
+  }                                                                             
+}                           
 
 /* 
  * sigint_handler - The kernel sends a SIGINT to the shell whenver the
  *    user types ctrl-c at the keyboard.  Catch it and send it along
  *    to the foreground job.  
  */
-void sigint_handler(int sig) 
-{
-  return;
-}
+void sigint_handler(int sig)                                                    
+{                                                                               
+  if (verbose)                                                                  
+    printf("sigint_handler: entering\n");                                       
+  pid_t pid = fgpid(jobs);                                                      
+  int jid = pid2jid(pid);                                                       
+                                                                                
+  if (pid!=0) {                                                                 
+    kill(-pid, SIGINT);                                                         
+    if (sig < 0) {                                                              
+      printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, (-sig));      
+      deletejob(jobs, pid);                                                     
+    }                                                                           
+  }                                                                             
+  if (verbose)                                                                  
+    printf("sigint_handler: exiting\n");                                        
+  return;                                                                       
+}                            
 
 /*
  * sigtstp_handler - The kernel sends a SIGTSTP to the shell whenever
  *     the user types ctrl-z at the keyboard. Catch it and suspend the
  *     foreground job by sending it a SIGTSTP.  
  */
-void sigtstp_handler(int sig) 
-{
-  return;
-}
+void sigtstp_handler(int sig)                                                   
+{                                                                               
+  int pid = fgpid(jobs);                                                        
+  int jid = pid2jid(pid);                                                       
+                                                                                
+  if (pid != 0)                                                                 
+  {                                                                             
+    kill(-pid, SIGINT);                                                         
+    if (sig < 0)                                                                
+    {                                                                           
+      printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, (-sig));      
+      deletejob(jobs, pid);                                                     
+    }                                                                           
+  }                                                                             
+  return;                                                                       
+}                      
 
 /*********************
  * End signal handlers
