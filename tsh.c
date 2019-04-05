@@ -2,6 +2,7 @@
  * tsh - A tiny shell program with job control
  * 
  * <Mrigank Doshy     911428894>
+ * Referred some code from lecture slides and CS:APP Textbook
  */
 #include <stdio.h>
 #include <stdlib.h>
