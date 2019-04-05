@@ -183,10 +183,12 @@ void eval(char *cmdline)
  *     2. Add SIGCHLD to the set and add the signals in the set to blocked
  *     3. Block SIGCHLD 
  *  */
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGCHLD);
-    sigprocmask(SIG_BLOCK, &mask, NULL);
-    
+    if (sigemptyset(&mask) < 0)
+      unix_error("sigemptyset error\n");
+    if (sigaddset(&mask, SIGCHLD) < 0)
+      unix_error("sigaddset error\n");
+    if (sigprocmask(SIG_BLOCK, &mask, NULL) < 0)
+      unix_error("sigprocmask error\n"); 
     //Display an error if return of fork is negative: Forking Error
     if ((pid = fork()) < 0)
       unix_error("Forking error");
@@ -197,8 +199,10 @@ void eval(char *cmdline)
  *    3. Check if command exists, if not, display command not found
  *  */
     else if (pid==0) {
-      setpgid(0,0);
-      sigprocmask(SIG_UNBLOCK, &mask, NULL);
+      if (setpgid(0,0) < 0)
+        unix_error("setpgid error\n"); 
+      if (sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0)
+        unix_error("sigprocmask error\n"); 
       if (execve(argv[0], argv, environ) < 0) {
         printf("%s: Command not found\n", argv[0]);
         exit(0);
@@ -212,12 +216,14 @@ void eval(char *cmdline)
  *      */
     if (!bg) {
       addjob(jobs, pid, FG, cmdline);
-      sigprocmask(SIG_UNBLOCK, &mask, NULL);
+      if (sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0)
+        unix_error("sigprocmask error\n");
       waitfg(pid);
     }
     else {
       addjob(jobs, pid, BG, cmdline);
-      sigprocmask(SIG_UNBLOCK, &mask, NULL);
+      if (sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0)
+        unix_error("sigprocmask error\n");
       printf("[%d] (%d) %s", pid2jid(pid), pid, cmdline); 
     }
   }
@@ -389,7 +395,8 @@ void waitfg(pid_t pid)
  *   sigsuspend is much faster than sleep and can avoid timeouts. 
  *   In sigsuspend, if it returns, the return value is always -1. */
   sigset_t mask;
-  sigemptyset (&mask);
+  if (sigemptyset(&mask) < 0)
+    unix_error("sigemptyset error\n");
   while(1) {
     if (pid!=fgpid(jobs))
       break;
