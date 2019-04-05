@@ -360,23 +360,24 @@ void do_bgfg(char **argv)
  *    3. Print Background job information
  **/
   if (strcmp(argv[0], "fg") == 0) {
-    kill(-(job->pid), SIGCONT);
+    if (kill(-(job->pid), SIGCONT) < 0) 
+      unix_error("kill error\n");    
     job->state = FG;
     waitfg(job->pid);
   }
   else if (strcmp(argv[0], "bg") == 0) {
-    kill(-(job->pid), SIGCONT);
+    if (kill(-(job->pid), SIGCONT) < 0)
+      unix_error("kill error\n");    
     job->state=BG;
     printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
   }
   //Handle Error
   else
     printf("bg/fg error: %s\n", argv[0]);
-
-  if (kill(-(job->pid), SIGCONT) < 0)                                           
-    if (errno!=  ESRCH)                                                         
-      printf("kill error\n");     
+  if (kill(-(job->pid), SIGCONT) < 0)
+    unix_error("kill error\n");     
 }
+
 
 /* 
  * waitfg - Block until process pid is no longer the foreground process
@@ -412,7 +413,6 @@ void sigchld_handler(int sig)
   int status;
   int jid;
   pid_t pid;
-
 /* 
  *  1. If pid > 0, then the wait that is set is the only one child process with
  *     process ID equal to pid given 
@@ -465,8 +465,7 @@ void sigint_handler(int sig)
  * that pid */
   if (pid!=0) {
     if (kill(-pid, SIGINT) < 0)
-      if (errno != ESRCH)
-        printf("kill error\n");
+      unix_error("kill error\n");
     if (sig < 0) {
       printf("Job [%d] (%d) terminated by signal %d\n", jid, pid, (-sig));
       deletejob(jobs, pid);
@@ -489,10 +488,9 @@ void sigtstp_handler(int sig)
  * Also, indicate which job was stopped by signal and delete the job with    
  * that pid */      
   if (pid != 0) {
-    if (kill(-pid, SIGTSTP) < 0)
-      if (errno != ESRCH) 
-        printf("kill error\n");                                                         
-    if (sig < 0) {                                                                           
+    if (kill(-pid, SIGTSTP) < 0) 
+      unix_error("kill error\n");                                             
+    if (sig < 0) {
       printf("Job [%d] (%d) stopped by signal %d\n", jid, pid, (-sig));      
       deletejob(jobs, pid);                                           
     }           
