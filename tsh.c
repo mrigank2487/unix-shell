@@ -455,6 +455,12 @@ void sigchld_handler(int sig)
       exit(1);
     }
   }
+  /* Special case when waitpid can give an error: If one child is remaining
+ *   and then gets reaped, it would still enter the loop, so when pid < 0,
+ *   waitpid is not to br executed */
+  if (pid < 0)
+    if (errno!=ECHILD)
+      unix_error("waitpid error\n");
   return;    
 }
 
